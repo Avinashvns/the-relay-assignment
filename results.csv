@@ -1,0 +1,5 @@
+request_id,scenario,source,start_time,first_token_ms,total_ms,status,retries,tokens_in,tokens_out,retrieval_setting,answer_grade
+afb9e21d-32fa-4f2e-a5a8-d3f8272e9eba,smoke_test,real,2026-11-09T10:35:10.688+00:00,,228.9,error,0,,,small_k3,
+ddf1fcaa-c1f0-4e07-8b9a-84f8633c012b,smoke_test,real,2026-11-09T10:51:14.566+00:00,,257.1,error,0,,,small_k3,
+e6fe750a-39cf-43d7-98c6-b027834b1811,smoke_test,real,2026-11-09T10:53:45.911+00:00,1166.2,1517.9,ok,0,974,270,small_k3,correct
+d1e38b32-dd5d-43e4-bd7b-ea125e7fea16,smoke_test,real,2026-11-09T10:57:00.007+00:00,962.3,993.2,ok,0,939,89,small_k3,refused_correctly
