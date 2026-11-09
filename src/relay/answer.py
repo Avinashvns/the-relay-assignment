@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import re
 import uuid
@@ -14,6 +15,16 @@ from retrieval import BM25Retriever
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RESULTS_FILE = PROJECT_ROOT / "results.csv"
+RATE_LIMIT_LOG_FILE = PROJECT_ROOT / "rate_limit_headers.jsonl"
+RATE_LIMIT_HEADER_NAMES = (
+    "retry-after",
+    "x-ratelimit-limit-requests",
+    "x-ratelimit-remaining-requests",
+    "x-ratelimit-reset-requests",
+    "x-ratelimit-limit-tokens",
+    "x-ratelimit-remaining-tokens",
+    "x-ratelimit-reset-tokens",
+)
 
 CSV_COLUMNS = [
     "request_id",
@@ -139,6 +150,28 @@ def append_result(row):
         writer.writerow(row)
 
 
+def record_rate_limit_headers(request_id, status_code, headers):
+    """Persist only the rate-limit headers needed for the assignment."""
+    headers = headers or {}
+    selected_headers = {name: headers.get(name) for name in RATE_LIMIT_HEADER_NAMES}
+    observation = {
+        "request_id": request_id,
+        "observed_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+        "http_status": status_code,
+        "headers": selected_headers,
+    }
+
+    with RATE_LIMIT_LOG_FILE.open("a", encoding="utf-8") as log_file:
+        log_file.write(json.dumps(observation) + "\n")
+
+    print("\nRate-limit response details:")
+    print(f"HTTP status: {status_code}")
+    for name, value in selected_headers.items():
+        if value is not None:
+            print(f"{name}: {value}")
+    print(f"Header observation saved to: {RATE_LIMIT_LOG_FILE}")
+
+
 def ask_answer_grade():
     print("\nCheck the answer and its citations against the cited paper pages.")
     print("1. correct")
@@ -245,6 +278,8 @@ def main():
     }
 
     answer_parts = []
+    finish_reason = ""
+    rate_headers_recorded = False
 
     try:
         client = Groq(
@@ -253,52 +288,43 @@ def main():
             max_retries=0,
         )
 
-        stream = client.chat.completions.create(
+        with client.chat.completions.with_streaming_response.create(
             model=model_id,
             messages=[
-                {
-                    "role": "system",
-                    "content": system_message,
-                },
-                {
-                    "role": "user",
-                    "content": user_message,
-                },
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message},
             ],
             stream=True,
-            extra_body={
-                "stream_options": {"include_usage": True}
-            },
-            max_completion_tokens=350,
-        )
+            extra_body={"stream_options": {"include_usage": True}},
+            max_completion_tokens=600,
+        ) as response:
+            record_rate_limit_headers(request_id, response.status_code, response.headers)
+            rate_headers_recorded = True
+            stream = response.parse()
 
-        for chunk in stream:
-            tokens_in, tokens_out = get_stream_usage(chunk)
+            for chunk in stream:
+                tokens_in, tokens_out = get_stream_usage(chunk)
+                if tokens_in is not None:
+                    row["tokens_in"] = tokens_in
+                if tokens_out is not None:
+                    row["tokens_out"] = tokens_out
 
-            if tokens_in is not None:
-                row["tokens_in"] = tokens_in
+                choices = get_value(chunk, "choices") or []
+                if not choices:
+                    continue
 
-            if tokens_out is not None:
-                row["tokens_out"] = tokens_out
+                chunk_finish_reason = get_value(choices[0], "finish_reason")
+                if chunk_finish_reason:
+                    finish_reason = chunk_finish_reason
 
-            choices = get_value(chunk, "choices") or []
+                delta = get_value(choices[0], "delta")
+                content = get_value(delta, "content") if delta else None
+                if not content:
+                    continue
 
-            if not choices:
-                continue
-
-            delta = get_value(choices[0], "delta")
-            content = get_value(delta, "content") if delta else None
-
-            if not content:
-                continue
-
-            if row["first_token_ms"] == "":
-                row["first_token_ms"] = round(
-                    (perf_counter() - started) * 1000,
-                    1,
-                )
-
-            answer_parts.append(content)
+                if row["first_token_ms"] == "":
+                    row["first_token_ms"] = round((perf_counter() - started) * 1000, 1)
+                answer_parts.append(content)
 
         raw_answer = "".join(answer_parts).strip()
 
@@ -314,6 +340,12 @@ def main():
 
         print("\nAnswer:\n")
         print(final_answer)
+        print(f"Generation finish reason: {finish_reason or 'not provided'}")
+        if finish_reason == "length":
+            print(
+                "Warning: the model reached max_completion_tokens; "
+                "the answer may be incomplete."
+            )
 
         if row["tokens_in"] == "" or row["tokens_out"] == "":
             print(
@@ -324,6 +356,15 @@ def main():
         row["answer_grade"] = ask_answer_grade()
 
     except Exception as error:
+        response = getattr(error, "response", None)
+        error_headers = getattr(response, "headers", None)
+        if not rate_headers_recorded and error_headers:
+            error_status = getattr(response, "status_code", None)
+            if error_status is None:
+                error_status = getattr(error, "status_code", None)
+            record_rate_limit_headers(request_id, error_status, error_headers)
+            rate_headers_recorded = True
+
         status_code = getattr(error, "status_code", None)
         error_name = type(error).__name__.lower()
 
