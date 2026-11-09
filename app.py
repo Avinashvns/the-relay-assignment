@@ -56,30 +56,108 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
-    :root { --ink:#edf4ff; --muted:#9aabc3; --line:#26364d; --panel:#101a29; --cyan:#66d9e8; --violet:#a995ff; }
-    html, body, [class*="css"] { font-family: 'Manrope', sans-serif; }
-    .stApp { background: radial-gradient(ellipse at 10% 0%, #183451 0, transparent 34%), radial-gradient(ellipse at 95% 12%, #28204a 0, transparent 30%), #08111d; color:var(--ink); }
-    [data-testid="stSidebar"] { background:#0d1725; border-right:1px solid var(--line); }
-    .block-container { max-width:1420px; padding-top:2.2rem; padding-bottom:4rem; }
-    h1,h2,h3 { letter-spacing:-.035em; }
-    .hero-kicker { color:var(--cyan); text-transform:uppercase; font-size:.72rem; font-weight:800; letter-spacing:.16em; }
-    .hero-title { color:var(--ink); font-size:2.55rem; font-weight:800; letter-spacing:-.06em; margin:.35rem 0 .25rem; }
-    .hero-sub { color:var(--muted); font-size:1rem; margin-bottom:1.25rem; }
-    .status-pill { display:inline-block; border:1px solid #287d7a; background:#102c34; color:#93edf0; border-radius:99px; padding:.35rem .7rem; font-size:.76rem; font-weight:700; }
-    .panel { background:linear-gradient(145deg,#111e30,#0d1725); border:1px solid var(--line); border-radius:18px; padding:1rem 1.1rem; margin:.45rem 0; }
-    .rank-card { background:#101b2b; border:1px solid #2b3d57; border-radius:15px; padding:1rem 1.1rem; margin:.65rem 0; }
-    .rank-title { color:#f1f6ff; font-size:1rem; font-weight:800; }
-    .rank-meta { color:#9caec7; font-size:.78rem; margin:.3rem 0 .55rem; font-family:'DM Mono',monospace; }
-    .rank-text { color:#d7e2f1; font-size:.91rem; line-height:1.65; }
-    .step-chip { border:1px solid var(--line); border-radius:12px; padding:.8rem; min-height:74px; background:#0e1928; }
-    .step-number { font-family:'DM Mono',monospace; color:var(--cyan); font-size:.72rem; }
-    .step-label { color:#dce8fa; font-weight:700; font-size:.85rem; margin-top:.2rem; }
-    div[data-testid="stMetric"] { background:#0f1b2b; border:1px solid var(--line); padding:.8rem 1rem; border-radius:14px; }
-    div[data-testid="stMetricLabel"] { color:#9aabc3; }
-    .small-note { color:var(--muted); font-size:.82rem; }
-    code, .stCode { font-family:'DM Mono',monospace; }
-    .stButton > button, .stDownloadButton > button { border-radius:11px; font-weight:800; }
+    :root { --navy:#14243b; --ink:#17263c; --muted:#60728a; --line:#dce5ef; --teal:#087e83; --aqua:#30cabb; }
+    html, body, [class*="css"] { font-family:'Manrope',Inter,system-ui,sans-serif; }
+    .stApp, [data-testid="stAppViewContainer"] { background:#f3f6fa !important; color:var(--ink) !important; }
+    [data-testid="stHeader"] { background:rgba(243,246,250,.96) !important; }
+    /* Keep Streamlit's header toolbar available: it contains the expand-sidebar control. */
+    [data-testid="stDecoration"], #MainMenu, footer { visibility:hidden !important; height:0 !important; }
+    [data-testid="stToolbar"] { visibility:visible !important; opacity:1 !important; }
+    .block-container { width:100% !important; max-width:1450px !important; box-sizing:border-box !important; margin-left:auto !important; margin-right:auto !important; padding:2rem 1.5rem 4rem !important; }
+    h1,h2,h3,h4 { color:#17263c !important; letter-spacing:-.035em; }
+    .hero-kicker { color:#087e83; text-transform:uppercase; font-size:.72rem; font-weight:900; letter-spacing:.16em; }
+    .hero-title { color:#14243b !important; font-size:2.55rem; font-weight:900; letter-spacing:-.06em; margin:.35rem 0 .25rem; }
+    .hero-sub { color:#52657d !important; font-size:1rem; margin-bottom:1.25rem; }
+    .status-pill { display:inline-block; border:1px solid #8edbd1; background:#e7f8f5; color:#086e6a; border-radius:99px; padding:.4rem .78rem; font-size:.77rem; font-weight:800; }
+    .step-chip { border:1px solid #dce5ef; border-radius:14px; padding:1rem 1rem; margin:.25rem 0 .75rem; min-height:82px; background:#ffffff; box-shadow:0 5px 16px rgba(20,36,59,.055); }
+    .step-number { font-family:'DM Mono',monospace; color:#07868a; font-size:.72rem; font-weight:700; }
+    .step-label { color:#21324a !important; font-weight:800; font-size:.84rem; margin-top:.25rem; }
+    .how-panel { background:linear-gradient(110deg,#e5f7f4,#edf3ff); border:1px solid #cce6e4; border-radius:15px; padding:1rem 1.15rem; margin:1rem 0 1.4rem; color:#20334b !important; }
+    .how-panel b { color:#087976 !important; }
+    .how-panel span { color:#425873 !important; }
+    .setting-card { background:#ffffff; border:1px solid #dce5ef; border-top:3px solid #43beb2; border-radius:15px; padding:1.1rem 1.15rem; margin:.35rem 0 .8rem; min-height:104px; color:#24364e !important; box-shadow:0 7px 20px rgba(20,36,59,.06); }
+    .setting-card b { display:block; color:#087e83 !important; margin-bottom:.35rem; font-size:.9rem; }
+    .setting-card span { color:#50627a !important; font-size:.82rem; line-height:1.5; }
+    .rank-card { background:#ffffff; border:1px solid #dce5ef; border-radius:15px; padding:1rem 1.1rem; margin:.7rem 0; box-shadow:0 7px 20px rgba(20,36,59,.055); transition:border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
+    .rank-card:hover { border-color:#77cfc7; transform:translateY(-1px); box-shadow:0 10px 24px rgba(20,36,59,.09); }
+    .rank-title { color:#182b45 !important; font-size:1rem; font-weight:900; }
+    .rank-meta { color:#557089 !important; font-size:.78rem; margin:.35rem 0 .6rem; font-family:'DM Mono',monospace; }
+    .rank-text { color:#34475e !important; font-size:.91rem; line-height:1.7; }
+    .sidebar-intro { border:1px solid #334b68; border-left:4px solid #45d9ca; border-radius:13px; padding:.9rem 1rem; margin:.35rem 0 1.1rem; background:linear-gradient(135deg,#172b45,#1a2d4a); color:#f4f8fd !important; }
+    .sidebar-intro strong { color:#73eee1 !important; font-size:.98rem; }
+    .sidebar-intro span { display:block; color:#d5e0ec !important; font-size:.82rem; line-height:1.55; margin-top:.4rem; }
+    [data-testid="stSidebar"] { background:#10213a !important; border-right:1px solid #213b5b; }
+    /* High-contrast sidebar toggle in both open and collapsed states. */
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stExpandSidebarButton"] button,
+    button[aria-label="Collapse sidebar"],
+    button[aria-label="Expand sidebar"] {
+        width:2.7rem !important; height:2.7rem !important; min-width:2.7rem !important;
+        border:2px solid #14243b !important; border-radius:12px !important;
+        background:#facc15 !important; color:#14243b !important;
+        box-shadow:0 4px 14px rgba(5,38,52,.34) !important;
+        opacity:1 !important; z-index:10001 !important;
+        transition:background .15s ease, transform .15s ease, box-shadow .15s ease;
+    }
+    [data-testid="stSidebarCollapseButton"] button:hover,
+    [data-testid="stSidebarCollapsedControl"] button:hover,
+    [data-testid="stExpandSidebarButton"]:hover,
+    [data-testid="stExpandSidebarButton"] button:hover,
+    button[aria-label="Collapse sidebar"]:hover,
+    button[aria-label="Expand sidebar"]:hover {
+        background:#fde68a !important; color:#14243b !important;
+        border-color:#14243b !important; transform:scale(1.06) !important;
+        box-shadow:0 0 0 4px rgba(250,204,21,.3),0 7px 18px rgba(5,38,52,.34) !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button svg,
+    [data-testid="stSidebarCollapsedControl"] button svg,
+    [data-testid="stExpandSidebarButton"] svg,
+    [data-testid="stExpandSidebarButton"] button svg,
+    button[aria-label="Collapse sidebar"] svg,
+    button[aria-label="Expand sidebar"] svg { color:#14243b !important; fill:#14243b !important; stroke:#14243b !important; opacity:1 !important; }
+    /* The expand control lives in the header while the sidebar is collapsed. */
+    [data-testid="stHeader"] [data-testid="stExpandSidebarButton"],
+    [data-testid="stHeader"] button[aria-label="Expand sidebar"] {
+        display:flex !important; visibility:visible !important; opacity:1 !important;
+        position:fixed !important; top:.55rem !important; left:.65rem !important;
+        z-index:10050 !important;
+    }
+    [data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,[data-testid="stSidebar"] h3,[data-testid="stSidebar"] p,[data-testid="stSidebar"] label { color:#eef4fb !important; }
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color:#d0dbea !important; }
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] * { color:#b8c9dc !important; opacity:1 !important; }
+    [data-testid="stWidgetLabel"] p,[data-testid="stWidgetLabel"] label { color:#273951 !important; opacity:1 !important; font-weight:800 !important; }
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,[data-testid="stSidebar"] [data-testid="stWidgetLabel"] label { color:#f1f6fc !important; }
+    div[data-testid="stMetric"] { background:#ffffff !important; border:1px solid #dce5ef !important; border-radius:15px !important; padding:1rem 1.05rem !important; margin:.2rem 0 .7rem !important; box-shadow:0 6px 18px rgba(20,36,59,.055); }
+    [data-testid="stMetricLabel"] *,[data-testid="stMetricLabel"] p { color:#5e7188 !important; opacity:1 !important; font-weight:800 !important; }
+    [data-testid="stMetricValue"] *,[data-testid="stMetricValue"] p { color:#172b45 !important; opacity:1 !important; font-weight:900 !important; }
+    [data-testid="stCaptionContainer"] * { color:#5d7088 !important; opacity:1 !important; }
+    [data-testid="stDataFrame"] { background:#ffffff !important; border:1px solid #dce5ef !important; border-radius:12px !important; }
+    [data-testid="stFileUploaderDropzone"] { background:#ffffff !important; border:1px dashed #8fa6bd !important; border-radius:14px !important; }
+    [data-testid="stFileUploaderDropzone"] * { color:#30465f !important; }
+    [data-baseweb="select"] > div { background:#ffffff !important; border:1px solid #cbd7e4 !important; border-radius:11px !important; color:#182a43 !important; }
+    [data-baseweb="select"] > div:focus-within { border-color:#14a49b !important; box-shadow:0 0 0 3px rgba(20,164,155,.15) !important; }
+    [data-testid="stSidebar"] [data-baseweb="select"] > div { background:#f8fbff !important; }
+    [data-testid="stTextArea"] textarea { background:#ffffff !important; border:1px solid #cbd7e4 !important; border-radius:12px !important; color:#172b45 !important; line-height:1.6 !important; }
+    [data-testid="stSidebar"] [data-testid="stTextArea"] textarea { background:#f8fbff !important; color:#172b45 !important; font-size:.96rem !important; }
+    [data-testid="stTextArea"] textarea:focus { border-color:#14a49b !important; box-shadow:0 0 0 3px rgba(20,164,155,.15) !important; }
+    [data-testid="stBaseButton-primary"], button[kind="primary"], .stButton > button[kind="primary"] { min-height:3.25rem !important; border:2px solid #0c7772 !important; border-radius:13px !important; background:linear-gradient(110deg,#087e83,#0ca99e) !important; color:#ffffff !important; font-size:1rem !important; font-weight:900 !important; letter-spacing:.02em !important; box-shadow:0 7px 20px rgba(8,126,131,.25) !important; opacity:1 !important; }
+    [data-testid="stBaseButton-primary"] *,button[kind="primary"] * { color:#ffffff !important; }
+    [data-testid="stBaseButton-primary"]:hover,button[kind="primary"]:hover,.stButton > button[kind="primary"]:hover { background:linear-gradient(110deg,#075d63,#07877e) !important; border-color:#064d53 !important; color:#ffffff !important; box-shadow:0 0 0 4px rgba(12,169,158,.18),0 10px 26px rgba(8,126,131,.3) !important; transform:translateY(-2px) !important; }
+    [data-testid="stBaseButton-primary"]:focus-visible,button[kind="primary"]:focus-visible { outline:4px solid #2dd4bf !important; outline-offset:3px !important; }
+    .stButton > button,.stFormSubmitButton > button,.stDownloadButton > button,[data-testid="stBaseButton-secondary"] { min-height:2.65rem !important; border:1px solid #b7c6d6 !important; border-radius:11px !important; background:#ffffff !important; color:#20334a !important; font-weight:800 !important; box-shadow:0 3px 10px rgba(20,36,59,.05) !important; }
+    .stButton > button:hover,.stFormSubmitButton > button:hover,.stDownloadButton > button:hover,[data-testid="stBaseButton-secondary"]:hover { background:#eaf7f5 !important; border-color:#3caea5 !important; color:#075f5b !important; box-shadow:0 0 0 3px rgba(20,164,155,.12) !important; }
+    [data-testid="stSidebar"] .stFormSubmitButton > button { background:#facc15 !important; border:2px solid #d2a900 !important; color:#14243b !important; font-weight:900 !important; }
+    [data-testid="stSidebar"] .stFormSubmitButton > button:hover { background:#fde68a !important; border-color:#14243b !important; color:#14243b !important; }
+    .stMarkdown p { color:#465b73; }
+    code,.stCode { font-family:'DM Mono',monospace; }
+    @media (max-width: 900px) {
+        .block-container { max-width:100% !important; padding-left:1rem !important; padding-right:1rem !important; }
+    }
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -174,6 +252,25 @@ def append_result(row):
         writer.writerow(row)
 
 
+def count_indexed_chunks(setting_name):
+    """Count the pre-built paper chunks searched by the selected setting."""
+    chunks_file = PROJECT_ROOT / "data" / "processed" / f"chunks_{setting_name}.jsonl"
+    if not chunks_file.exists():
+        return None
+    try:
+        with chunks_file.open("r", encoding="utf-8") as chunks:
+            return sum(1 for line in chunks if line.strip())
+    except (OSError, UnicodeError):
+        return None
+
+
+def has_positive_bm25_score(item):
+    try:
+        return float(item.get("bm25_score") or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
 def run_groq(model_id, question, context, started):
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key or api_key == "YOUR_KEY_HERE":
@@ -247,7 +344,8 @@ def show_run(run):
     m4.metric("Output tokens", run.get("tokens_out") or "—")
 
     if run.get("results"):
-        st.subheader("Retrieved passages · BM25 ranking")
+        st.subheader("Why these passages ranked")
+        st.caption("BM25 score estimates keyword match (higher ranks first). A rerank score appears only when the selected strategy reranks passages.")
         for item in run["results"]:
             rerank_value = item.get("rerank_score")
             rerank_text = (
@@ -275,25 +373,85 @@ def show_run(run):
             )
 
 
+def show_retrieval_check(run):
+    """Make query search coverage visible before the generated answer."""
+    st.subheader("Retrieval check")
+    st.caption(f"Question: {run.get('question', '—')}")
+    st.caption(
+        "The question is not chunked. It is searched against the paper chunks that were prepared earlier."
+    )
+
+    indexed_count = run.get("indexed_chunks")
+    indexed_label = f"{indexed_count:,}" if isinstance(indexed_count, int) else "Unavailable"
+    results = run.get("results") or []
+    retrieved_count = len(results)
+    strategy_label = run.get("retrieval_setting", "—")
+    request_status = run.get("model_request_status", "not_sent")
+    request_labels = {
+        "completed": "Completed",
+        "sent": "Sent",
+        "failed": "Failed",
+        "not_sent": "Skipped",
+    }
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Paper chunks searched", indexed_label)
+    c2.metric("Matching passages", retrieved_count)
+    c3.metric("Retrieval strategy", strategy_label)
+    c4.metric("Groq request", request_labels.get(request_status, request_status))
+
+    retrieval_status = run.get("retrieval_status")
+    if retrieval_status == "found":
+        st.success(
+            f"Found {retrieved_count} matching passage(s). Review the ranked evidence and citations below to decide whether they answer the question."
+        )
+        st.caption("A retrieval match means relevant-looking passages were found; it does not by itself prove the answer is in the papers.")
+    elif retrieval_status == "not_found":
+        st.warning(
+            "No matching passages were found in this setting. The Groq request was skipped and the assistant returned its evidence-insufficient response."
+        )
+    elif retrieval_status == "error":
+        st.error("The retrieval step failed before matching passages could be checked.")
+
+
 def main():
     model_id = os.getenv("GROQ_MODEL", "")
     rows = read_result_rows()
     successful_rows = [row for row in rows if row.get("status") == "ok"]
 
-    st.markdown('<div class="hero-kicker">THE RELAY · LIVE PROJECT DEMO</div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-title">Research assistant, made observable.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-kicker">THE RELAY · PROJECT DEMO</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-title">The Relay · Research Paper Assistant</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="hero-sub">Ask from a fixed paper library. Inspect retrieval, citations, latency, quality and raw results.</div>',
+        '<div class="hero-sub">Choose a retrieval strategy, ask a question, inspect paper evidence, grade the answer, and review the CSV results.</div>',
         unsafe_allow_html=True,
     )
-    st.markdown('<span class="status-pill">Local dashboard · API key stays in .env</span>', unsafe_allow_html=True)
+    st.markdown('<span class="status-pill">LOCAL DEMO · GROQ KEY STAYS IN .ENV</span>', unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="how-panel"><b>How to use this dashboard</b><br>'
+        '<span>Choose a retrieval strategy in the left panel → ask a paper question → inspect the ranked evidence and cited answer → grade it → save the run to CSV.</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("### What the retrieval settings change")
+    setting_cards = st.columns(3)
+    card_content = [
+        ("small_k3", "Small chunks", "Fetches 3 passages. Fast, compact baseline."),
+        ("medium_k4", "Medium chunks", "Fetches 4 passages. Adds more context."),
+        ("large_k5_rerank", "Large + rerank", "Fetches 5 passages, then reranks candidates."),
+    ]
+    for column, (code, title, description) in zip(setting_cards, card_content):
+        column.markdown(
+            f'<div class="setting-card"><b>{code} · {title}</b><span>{description}</span></div>',
+            unsafe_allow_html=True,
+        )
 
     steps = [
         ("01", "Question"),
-        ("02", "BM25 retrieval"),
-        ("03", "Groq generation"),
-        ("04", "Citation check"),
-        ("05", "Evaluation + CSV"),
+        ("02", "Rank evidence"),
+        ("03", "Draft answer"),
+        ("04", "Check citations"),
+        ("05", "Grade + save"),
     ]
     columns = st.columns(len(steps))
     for column, (number, label) in zip(columns, steps):
@@ -306,7 +464,8 @@ def main():
     k1.metric("Recorded runs", len(rows))
     k2.metric("Successful runs", len(successful_rows))
     k3.metric("Retrieval settings", "3")
-    k4.metric("Model", model_id or "Not configured")
+    model_label = model_id.split("/")[-1] if model_id else "Not configured"
+    k4.metric("Groq model", model_label)
 
     if RETRIEVAL_IMPORT_ERROR is not None:
         st.error(
@@ -326,31 +485,84 @@ def main():
         return
 
     setting_names = sorted(retriever.corpora)
+    setting_explanations = {
+        "small_k3": "Small pieces · top 3 results · reranking off",
+        "medium_k4": "Medium pieces · top 4 results · reranking off",
+        "large_k5_rerank": "Large pieces · top 5 results · reranking on",
+    }
+
+    previous_run = st.session_state.get("relay_last_run")
+
     with st.sidebar:
-        st.markdown("## Run a question")
+        st.markdown(
+            '<div class="sidebar-intro"><strong>Ask the paper library</strong>'
+            '<span>1. Pick how passages are retrieved. 2. Type a question. 3. Run it. 4. Review, grade, and save it below.</span></div>',
+            unsafe_allow_html=True,
+        )
         setting_name = st.selectbox(
-            "Retrieval setting",
+            "1 · Retrieval strategy",
             setting_names,
             format_func=lambda name: {
-                "small_k3": "Small chunks · top 3 · no rerank",
-                "medium_k4": "Medium chunks · top 4 · no rerank",
-                "large_k5_rerank": "Large chunks · top 5 · rerank",
+                "small_k3": "Small chunks · 3 passages",
+                "medium_k4": "Medium chunks · 4 passages",
+                "large_k5_rerank": "Large chunks · 5 + rerank",
             }.get(name, name),
+            help="This changes chunk size, number of passages, and whether reranking is used.",
         )
-        st.caption(f"Model ID: `{model_id or 'missing in .env'}`")
+        st.caption(setting_explanations.get(setting_name, setting_name))
+        st.caption(f"Model ID: {model_id or 'Not set in .env'}")
         question = st.text_area(
-            "Question",
+            "2 · Your question",
             value="How is scaled dot-product attention computed?",
             height=130,
-            placeholder="Ask a question about the three assigned papers…",
+            placeholder="Ask something the assigned research papers may answer…",
         )
         run_clicked = st.button(
-            "Run real Groq request",
+            "3 · RUN QUESTION",
             type="primary",
             use_container_width=True,
             disabled=not bool(model_id),
         )
-        st.caption("One click sends one real request and uses your Groq account limits.")
+        st.markdown("### 4 · Evaluate & save to CSV")
+        if not previous_run:
+            st.caption("After a run, review the answer in the main panel, choose its grade here, and save it to results.csv.")
+        elif previous_run.get("status") == "ok" and not previous_run.get("saved"):
+            st.caption("Review the answer and citations in the main panel, then select a grade below.")
+            grade_labels = {
+                "correct": "Correct · supported by the paper",
+                "wrong": "Wrong · unsupported or incorrect",
+                "refused_correctly": "Refused correctly · evidence was insufficient",
+                "refused_wrongly": "Refused wrongly · evidence was available",
+            }
+            with st.form("sidebar_evaluation_form"):
+                grade_label = st.selectbox(
+                    "Answer evaluation",
+                    list(grade_labels),
+                    format_func=lambda value: grade_labels[value],
+                )
+                save_clicked = st.form_submit_button(
+                    "SAVE EVALUATION TO RESULTS.CSV",
+                    use_container_width=True,
+                )
+            if save_clicked:
+                previous_run["answer_grade"] = grade_label
+                row = {column: previous_run.get(column, "") for column in CSV_COLUMNS}
+                append_result(row)
+                previous_run["saved"] = True
+                st.session_state["relay_last_run"] = previous_run
+                st.rerun()
+        elif previous_run.get("status") == "ok" and previous_run.get("saved"):
+            st.success(f"Evaluation saved · {previous_run.get('answer_grade', '')}")
+        elif previous_run.get("saved"):
+            st.info("This failed request was recorded in results.csv.")
+        else:
+            st.caption("Failed requests are recorded automatically in results.csv.")
+
+        st.markdown(
+            '<div class="sidebar-intro"><strong>What happens when you run it?</strong>'
+            '<span>The app sends one live Groq request. The answer and ranked passages appear in the main panel; grading and saving stay here.</span></div>',
+            unsafe_allow_html=True,
+        )
 
     if not model_id:
         st.warning("Add your selected model ID as GROQ_MODEL in the project-root .env file.")
@@ -378,26 +590,37 @@ def main():
                 "question": question.strip(),
                 "results": [],
                 "answer": "",
+                "indexed_chunks": count_indexed_chunks(setting_name),
+                "retrieval_status": "pending",
+                "model_request_status": "not_sent",
             }
 
             with st.spinner("Searching the selected paper chunks…"):
                 try:
                     retrieved = retriever.retrieve(question.strip(), setting_name)
-                    run_state["results"] = retrieved
+                    matching_passages = [
+                        item for item in retrieved if has_positive_bm25_score(item)
+                    ]
+                    run_state["results"] = matching_passages
+                    run_state["retrieval_status"] = (
+                        "found" if matching_passages else "not_found"
+                    )
 
-                    if not retrieved or max(item["bm25_score"] for item in retrieved) <= 0:
+                    if not matching_passages:
                         run_state["answer"] = ABSTENTION
                         run_state["total_ms"] = round((perf_counter() - started) * 1000, 1)
                         run_state["source"] = "real"
                         run_state["local_refusal"] = True
                     else:
-                        context, citation_map = build_context(retrieved)
+                        context, citation_map = build_context(matching_passages)
+                        run_state["model_request_status"] = "sent"
                         raw_answer, first_token_ms, tokens_in, tokens_out = run_groq(
                             model_id,
                             question.strip(),
                             context,
                             started,
                         )
+                        run_state["model_request_status"] = "completed"
                         run_state["answer"] = resolve_citations(raw_answer, citation_map)
                         run_state["first_token_ms"] = first_token_ms
                         run_state["tokens_in"] = tokens_in
@@ -405,6 +628,10 @@ def main():
                         run_state["total_ms"] = round((perf_counter() - started) * 1000, 1)
 
                 except Exception as error:
+                    if run_state.get("retrieval_status") == "pending":
+                        run_state["retrieval_status"] = "error"
+                    if run_state.get("model_request_status") == "sent":
+                        run_state["model_request_status"] = "failed"
                     status_code = getattr(error, "status_code", None)
                     error_name = type(error).__name__.lower()
                     if status_code == 429:
@@ -417,40 +644,20 @@ def main():
                     run_state["total_ms"] = round((perf_counter() - started) * 1000, 1)
 
             st.session_state["relay_last_run"] = run_state
+            st.rerun()
 
     run_state = st.session_state.get("relay_last_run")
     if run_state:
         st.divider()
+        show_retrieval_check(run_state)
         show_run(run_state)
 
-        if run_state.get("status") == "ok" and not run_state.get("saved"):
-            with st.form("evaluation_form"):
-                grade_label = st.selectbox(
-                    "Evaluate this answer against the cited paper pages",
-                    [
-                        "correct",
-                        "wrong",
-                        "refused_correctly",
-                        "refused_wrongly",
-                    ],
-                )
-                save_clicked = st.form_submit_button("Save evaluation to results.csv")
-
-            if save_clicked:
-                run_state["answer_grade"] = grade_label
-                row = {column: run_state.get(column, "") for column in CSV_COLUMNS}
-                append_result(row)
-                run_state["saved"] = True
-                st.session_state["relay_last_run"] = run_state
-                st.success(f"Saved request {run_state['request_id']} to results.csv")
-                st.rerun()
-
-        elif run_state.get("status") != "ok" and not run_state.get("saved"):
+        if run_state.get("status") != "ok" and not run_state.get("saved"):
             row = {column: run_state.get(column, "") for column in CSV_COLUMNS}
             append_result(row)
             run_state["saved"] = True
             st.session_state["relay_last_run"] = run_state
-            st.info("The failed request has been recorded in results.csv.")
+            st.rerun()
 
     st.divider()
     st.header("Evaluation and raw results")
