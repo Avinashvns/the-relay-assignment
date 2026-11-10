@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 from html import escape
 import re
@@ -16,6 +17,9 @@ from groq import Groq
 PROJECT_ROOT = Path(__file__).resolve().parent
 RELAY_SOURCE = PROJECT_ROOT / "src" / "relay"
 RESULTS_FILE = PROJECT_ROOT / "results.csv"
+QUESTION_LOG_FILE = PROJECT_ROOT / "question_log.csv"
+RATE_LIMIT_FILE = PROJECT_ROOT / "rate_limit_headers.jsonl"
+REPORT_FILE = PROJECT_ROOT / "REPORT.md"
 CSV_COLUMNS = [
     "request_id",
     "scenario",
@@ -241,6 +245,192 @@ def read_result_rows(path=RESULTS_FILE):
             return list(csv.DictReader(csv_file))
     except (OSError, csv.Error, UnicodeError):
         return []
+
+
+def read_question_log():
+    """Load the manually curated question-to-request mapping."""
+    if not QUESTION_LOG_FILE.exists():
+        return []
+    try:
+        with QUESTION_LOG_FILE.open("r", newline="", encoding="utf-8-sig") as csv_file:
+            return list(csv.DictReader(csv_file))
+    except (OSError, csv.Error, UnicodeError):
+        return []
+
+
+def read_latest_rate_limit_observation():
+    """Return the newest parseable response-header observation."""
+    if not RATE_LIMIT_FILE.exists():
+        return None
+    try:
+        with RATE_LIMIT_FILE.open("r", encoding="utf-8-sig") as jsonl_file:
+            for line in reversed(jsonl_file.readlines()):
+                if not line.strip():
+                    continue
+                try:
+                    observation = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(observation, dict):
+                    return observation
+    except (OSError, UnicodeError):
+        return None
+    return None
+
+
+def numeric_value(row, key):
+    try:
+        value = row.get(key)
+        return float(value) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def percentile(values, percentage):
+    """Calculate a linearly interpolated percentile without extra dependencies."""
+    ordered = sorted(values)
+    if not ordered:
+        return None
+    position = (len(ordered) - 1) * percentage / 100
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    fraction = position - lower
+    return round(ordered[lower] + (ordered[upper] - ordered[lower]) * fraction, 1)
+
+
+def build_question_evaluation(rows):
+    """Join the tracked questions to their recorded answers and summarize grades."""
+    question_log = read_question_log()
+    result_by_id = {
+        row.get("request_id"): row
+        for row in rows
+        if row.get("request_id")
+    }
+    detail_rows = []
+    graded_rows = []
+
+    for item in question_log:
+        result = result_by_id.get(item.get("request_id"), {})
+        detail_rows.append(
+            {
+                "Question": item.get("question", ""),
+                "Setting": result.get("retrieval_setting", "Not found"),
+                "Status": result.get("status", "Not run"),
+                "Grade": result.get("answer_grade", "") or "Not graded",
+                "First token (ms)": result.get("first_token_ms", ""),
+                "Total time (ms)": result.get("total_ms", ""),
+                "Input tokens": result.get("tokens_in", ""),
+                "Output tokens": result.get("tokens_out", ""),
+            }
+        )
+        if (
+            result.get("source") == "real"
+            and result.get("status") == "ok"
+            and result.get("answer_grade")
+        ):
+            graded_rows.append(result)
+
+    grouped = {}
+    for row in graded_rows:
+        grouped.setdefault(row.get("retrieval_setting", "unknown"), []).append(row)
+
+    summary_rows = []
+    for setting, setting_rows in sorted(grouped.items()):
+        count = len(setting_rows)
+        grades = [row.get("answer_grade", "") for row in setting_rows]
+        token_totals = [
+            input_tokens + output_tokens
+            for row in setting_rows
+            if (input_tokens := numeric_value(row, "tokens_in")) is not None
+            and (output_tokens := numeric_value(row, "tokens_out")) is not None
+        ]
+        first_tokens = [
+            value for row in setting_rows
+            if (value := numeric_value(row, "first_token_ms")) is not None
+        ]
+        total_times = [
+            value for row in setting_rows
+            if (value := numeric_value(row, "total_ms")) is not None
+        ]
+        correct = grades.count("correct")
+        wrong = grades.count("wrong") + grades.count("refused_wrongly")
+        refused_correctly = grades.count("refused_correctly")
+        summary_rows.append(
+            {
+                "Setting": setting,
+                "Graded questions": count,
+                "Correct + cited (%)": round(correct * 100 / count, 1),
+                "Wrong (%)": round(wrong * 100 / count, 1),
+                "Correctly refused (%)": round(refused_correctly * 100 / count, 1),
+                "Mean tokens / answer": round(sum(token_totals) / len(token_totals), 1) if token_totals else "—",
+                "First token p50 / p95 (ms)": (
+                    f"{percentile(first_tokens, 50)} / {percentile(first_tokens, 95)}"
+                    if first_tokens else "—"
+                ),
+                "Total time p50 / p95 (ms)": (
+                    f"{percentile(total_times, 50)} / {percentile(total_times, 95)}"
+                    if total_times else "—"
+                ),
+            }
+        )
+
+    return question_log, graded_rows, summary_rows, detail_rows
+
+
+def build_scenario_summary(rows):
+    """Summarize real and stand-in requests by source and scenario."""
+    grouped = {}
+    for row in rows:
+        key = (row.get("source", "unknown"), row.get("scenario", "unknown"))
+        grouped.setdefault(key, []).append(row)
+
+    summary_rows = []
+    for (source, scenario), scenario_rows in sorted(grouped.items()):
+        count = len(scenario_rows)
+        statuses = [row.get("status", "") for row in scenario_rows]
+        successful = [row for row in scenario_rows if row.get("status") == "ok"]
+        ttft = [
+            value for row in scenario_rows
+            if (value := numeric_value(row, "first_token_ms")) is not None
+        ]
+        total_times = [
+            value for row in scenario_rows
+            if (value := numeric_value(row, "total_ms")) is not None
+        ]
+        token_totals = [
+            input_tokens + output_tokens
+            for row in successful
+            if (input_tokens := numeric_value(row, "tokens_in")) is not None
+            and (output_tokens := numeric_value(row, "tokens_out")) is not None
+        ]
+        retries = [
+            value for row in scenario_rows
+            if (value := numeric_value(row, "retries")) is not None
+        ]
+        rate_limited = statuses.count("rate_limited")
+        summary_rows.append(
+            {
+                "Source": source,
+                "Scenario": scenario,
+                "Requests": count,
+                "Succeeded (%)": round(len(successful) * 100 / count, 1),
+                "Rate-limited (%)": round(rate_limited * 100 / count, 1),
+                "Errors (%)": round((count - len(successful) - rate_limited) * 100 / count, 1),
+                "Mean retries": round(sum(retries) / len(retries), 2) if retries else "—",
+                "TTFT p50 / p95 / p99 (ms)": (
+                    f"{percentile(ttft, 50)} / {percentile(ttft, 95)} / {percentile(ttft, 99)}"
+                    if ttft else "—"
+                ),
+                "Total p50 / p95 / p99 (ms)": (
+                    f"{percentile(total_times, 50)} / {percentile(total_times, 95)} / {percentile(total_times, 99)}"
+                    if total_times else "—"
+                ),
+                "Mean tokens / successful answer": (
+                    round(sum(token_totals) / len(token_totals), 1) if token_totals else "—"
+                ),
+            }
+        )
+    return summary_rows
 
 
 def append_result(row):
@@ -660,6 +850,101 @@ def main():
             st.rerun()
 
     st.divider()
+    st.header("Assignment evaluation and load-test results")
+    question_log, graded_question_rows, evaluation_summary, question_details = build_question_evaluation(rows)
+    scenario_summary = build_scenario_summary(rows)
+    tracked_col, graded_col, scenario_col = st.columns(3)
+    tracked_col.metric("Questions in evaluation log", len(question_log))
+    graded_col.metric("Graded question runs", len(graded_question_rows))
+    scenario_col.metric("Source/scenario groups", len(scenario_summary))
+
+    evaluation_tab, scenarios_tab, limits_tab = st.tabs(
+        ["Question evaluation", "Real + stand-in scenarios", "Rate limits + downloads"]
+    )
+
+    with evaluation_tab:
+        st.caption(
+            "Question grades are joined to question_log.csv by request ID. "
+            "Wrong includes wrong answers and incorrect refusals."
+        )
+        if evaluation_summary:
+            st.dataframe(evaluation_summary, use_container_width=True, hide_index=True)
+        else:
+            st.info("No graded question-log entries are available yet.")
+        if question_details:
+            with st.expander("Show tracked questions and their recorded outcomes"):
+                st.dataframe(question_details, use_container_width=True, hide_index=True)
+
+    with scenarios_tab:
+        st.caption(
+            "Calculated from results.csv. Peak queue length, offered rate, and monetary cost were not recorded."
+        )
+        if scenario_summary:
+            st.dataframe(scenario_summary, use_container_width=True, hide_index=True)
+        else:
+            st.info("No scenario results are recorded yet.")
+        st.info(
+            "Stand-in rows are simulated. Their timings model configured delays and are not real Groq latency."
+        )
+
+    with limits_tab:
+        st.markdown("#### Account limits recorded for this run")
+        limit_columns = st.columns(4)
+        limit_columns[0].metric("Requests / minute", "30")
+        limit_columns[1].metric("Tokens / minute", "8,000")
+        limit_columns[2].metric("Requests / day", "1,000")
+        limit_columns[3].metric("Tokens / day", "200,000")
+        st.caption(
+            "Recorded from the Groq account limits page; limits can change with the account or model."
+        )
+
+        observation = read_latest_rate_limit_observation()
+        if observation:
+            headers = observation.get("headers") or {}
+            st.markdown("#### Latest saved response-header snapshot")
+            st.caption(
+                f"Observed at {observation.get('observed_at', '—')} · "
+                f"HTTP {observation.get('http_status', '—')} · "
+                f"request ID {observation.get('request_id', '—')}"
+            )
+            header_columns = st.columns(4)
+            header_columns[0].metric("Request limit header", headers.get("x-ratelimit-limit-requests", "—"))
+            header_columns[1].metric("Requests remaining", headers.get("x-ratelimit-remaining-requests", "—"))
+            header_columns[2].metric("Token limit header", headers.get("x-ratelimit-limit-tokens", "—"))
+            header_columns[3].metric("Tokens remaining", headers.get("x-ratelimit-remaining-tokens", "—"))
+            st.caption(
+                "A response-header snapshot may use a different request window than the per-minute account limit."
+            )
+        else:
+            st.info("No rate-limit header observations are available.")
+
+        download_columns = st.columns(3)
+        if REPORT_FILE.exists():
+            download_columns[0].download_button(
+                "Download final REPORT.md",
+                data=REPORT_FILE.read_bytes(),
+                file_name="REPORT.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+        if QUESTION_LOG_FILE.exists():
+            download_columns[1].download_button(
+                "Download question_log.csv",
+                data=QUESTION_LOG_FILE.read_bytes(),
+                file_name="question_log.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        if RATE_LIMIT_FILE.exists():
+            download_columns[2].download_button(
+                "Download rate-limit observations",
+                data=RATE_LIMIT_FILE.read_bytes(),
+                file_name="rate_limit_headers.jsonl",
+                mime="application/json",
+                use_container_width=True,
+            )
+
+    st.divider()
     st.header("Evaluation and raw results")
     st.caption(
         "The table below reads the project's results.csv. Upload another results.csv to preview it without changing the local file."
@@ -709,3 +994,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
